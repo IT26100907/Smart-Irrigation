@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Field Control — Smart Irrigation</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#eef6f1;--bg2:#f7fbf8;--card:#ffffffcc;--line:#e3ece6;--text:#17261f;--muted:#6b7d73;
+  --green:#16a34a;--green-d:#15803d;--blue:#2563eb;--amber:#f59e0b;--red:#dc2626;--teal:#0f766e;--purple:#7c3aed;
+  --shadow:0 1px 2px rgba(20,60,40,.05),0 6px 20px rgba(20,60,40,.06);
+}
+[data-theme="dark"]{
+  --bg:#0c1511;--bg2:#101b16;--card:#14211bcc;--line:#213229;--text:#e6f1ea;--muted:#8aa294;--shadow:0 1px 2px #0006,0 6px 20px #0004;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);
+  background:linear-gradient(180deg,var(--bg),var(--bg2));min-height:100vh;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 18px 60px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#16a34a,#0e7490);display:grid;place-items:center;color:#fff;box-shadow:var(--shadow)}
+.brand h1{margin:0;font-size:20px}.brand small{color:var(--muted);font-size:11px}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 14px;font-size:12px;cursor:pointer;color:var(--text);display:flex;align-items:center;gap:6px}
+.pill:hover{border-color:var(--green)}
+.grid{display:grid;grid-template-columns:1fr 300px;gap:20px}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.status4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+@media(max-width:700px){.status4{grid-template-columns:repeat(2,1fr)}}
+.card{background:var(--card);backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:16px}
+.stat{display:flex;gap:12px;align-items:center}
+.stat .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:17px}
+.stat small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.stat b{font-size:15px}
+h2{font-size:13px;margin:26px 0 10px;display:flex;align-items:center;gap:8px;color:var(--text)}
+h2 span{color:var(--green)}
+.sensors{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+@media(max-width:800px){.sensors{grid-template-columns:repeat(2,1fr)}}
+.sensor{text-align:center;padding:16px 8px;position:relative}
+.dot{position:absolute;top:12px;left:50%;width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.dot.on{background:var(--green)}
+.ring{width:78px;height:78px;margin:8px auto 10px;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .v{position:absolute;inset:0;display:grid;place-items:center;font-weight:700;font-size:18px;line-height:1}
+.ring .v small{display:block;font-size:9px;font-weight:500;color:var(--muted);margin-top:2px}
+.sensor .lbl{font-size:10px;letter-spacing:.07em;font-weight:700;text-transform:uppercase}
+.sensor .sub{font-size:10px;color:var(--muted);margin-top:4px}
+.big{font-size:26px;font-weight:800;margin:30px 0 14px}
+.tanks{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.tanks{grid-template-columns:1fr}}
+.tank{display:flex;justify-content:space-between;align-items:center}
+.tank .pct{font-size:28px;font-weight:800;margin:6px 0}
+.bar{height:5px;border-radius:9px;background:var(--line);overflow:hidden;width:150px;max-width:100%}
+.bar i{display:block;height:100%;border-radius:9px;transition:width .6s}
+.jar{width:46px;height:56px;border-radius:8px;border:2px solid var(--line);overflow:hidden;display:flex;align-items:flex-end;background:var(--bg2)}
+.jar i{display:block;width:100%;transition:height .6s}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+select,input[type=time]{border:1px solid var(--line);background:var(--bg2);color:var(--text);border-radius:8px;padding:7px 10px;font:inherit;font-size:12px}
+.btn{border:0;border-radius:9px;padding:9px 16px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn.g{background:var(--green);color:#fff}.btn.g:hover{background:var(--green-d)}
+.btn.o{background:transparent;border:1px solid var(--line);color:var(--text)}
+.chip{background:#16a34a1a;color:var(--green-d);border:1px solid #16a34a40;padding:8px 12px;border-radius:9px;font-size:12px}
+[data-theme=dark] .chip{color:#4ade80}
+.note{font-size:11px;color:var(--muted);border-left:3px solid var(--green);padding:6px 10px;margin-top:10px;background:var(--bg2);border-radius:0 8px 8px 0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:7px 14px;font:inherit;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.act{background:var(--green);color:#fff}
+.pumps{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:600px){.pumps{grid-template-columns:1fr}}
+.pump{display:flex;justify-content:space-between;align-items:center;border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg2)}
+.pump b{font-size:13px}.pump small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.sw{width:42px;height:24px;border-radius:99px;background:var(--line);position:relative;cursor:pointer;border:0;transition:.2s;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px #0004}
+.sw.on{background:var(--green)}.sw.on::after{left:21px}
+.sw:disabled{opacity:.4;cursor:not-allowed}
+.sessions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.sessions{grid-template-columns:1fr}}
+.sess{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg2)}
+.sess .t{display:flex;justify-content:space-between;font-weight:600;margin-bottom:8px}
+.sess .t em{font-style:normal;font-size:10px;color:var(--muted)}
+.cons{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:600px){.cons{grid-template-columns:1fr}}
+.cons .n{font-size:24px;font-weight:800;margin:10px 0 4px}
+.cons .n small{font-size:12px;font-weight:500;color:var(--muted)}
+.cons p{margin:0;font-size:10px;color:var(--muted)}
+.chartbox{height:230px}
+.log4{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg2)}
+@media(max-width:600px){.log4{grid-template-columns:repeat(2,1fr)}}
+.log4>div{padding:12px 14px;border-right:1px solid var(--line)}
+.log4 small{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:block}
+.log4 b{font-size:18px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
+td,th{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.side .card{margin-bottom:16px}
+.side h3{margin:0 0 12px;font-size:12px;display:flex;gap:6px;align-items:center}
+.al{display:flex;gap:8px;align-items:center;padding:5px 0;font-size:12px}
+.al i{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.al.ok i{background:var(--green)}.al.warn i{background:var(--amber)}.al.bad i{background:var(--red)}
+.kv{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);padding:3px 0}
+.clock{font-size:26px;font-weight:800;color:var(--teal)}
+.mini{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px}
+.err{background:#dc262615;border:1px solid #dc262650;color:var(--red);padding:10px 14px;border-radius:12px;margin-bottom:14px;display:none;font-size:12px;font-weight:600}
+.empty{text-align:center;color:var(--muted);padding:18px;font-size:12px}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#17261f;color:#fff;padding:10px 18px;border-radius:99px;font-size:12px;opacity:0;pointer-events:none;transition:.3s;z-index:9}
+.toast.show{opacity:1}
+footer{text-align:center;color:var(--muted);font-size:10px;margin-top:40px}
+.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal.show{display:flex}
+.mbox{background:var(--bg2);color:var(--text);border:1px solid var(--line);border-radius:16px;max-width:560px;width:100%;padding:20px;max-height:90vh;overflow:auto}
+.mbox h3{margin:0 0 6px}.mbox p{margin:0 0 12px;font-size:12px;color:var(--muted)}
+.mbox label{display:block;font-size:11px;font-weight:600;margin:10px 0 4px}
+.mbox input,.mbox textarea{width:100%;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:8px 10px;font:inherit;font-size:12px;font-family:ui-monospace,Consolas,monospace}
+.mbox textarea{height:120px;resize:vertical}
+.dotc{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red)}.dotc.ok{background:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="logo">🌿</div>
+      <div><h1>Field Control</h1><small>ESP32 · Firebase RTDB · DHT22 · HC-SR04 · Plot 01</small></div>
+    </div>
+    <div class="pills">
+      <button class="pill" id="themeBtn">🌙 Dark</button>
+      <button class="pill" id="fbBtn"><i class="dotc" id="fbDot"></i> Connect Firebase</button>
+      <button class="pill" id="demoBtn">● Demo data</button>
+      <span class="pill" id="modePill">⏻ Auto mode</span>
+    </div>
+  </header>
+
+  <div class="err" id="errBox"></div>
+
+  <div class="status4">
+    <div class="card stat"><div class="ic" style="background:#16a34a1a;color:var(--green)">📶</div><div><small>ESP32</small><b id="stEsp">Connecting…</b></div></div>
+    <div class="card stat"><div class="ic" style="background:#2563eb1a;color:var(--blue)">⚙</div><div><small>Mode</small><b id="stMode">Auto</b></div></div>
+    <div class="card stat"><div class="ic" style="background:#7c3aed1a;color:var(--purple)">💧</div><div><small>Active pump</small><b id="stPump">None</b></div></div>
+    <div class="card stat"><div class="ic" style="background:#f59e0b1a;color:var(--amber)">☀</div><div><small>Weather</small><b id="stWeather">—</b></div></div>
+  </div>
+
+  <div class="grid">
+    <main>
+      <h2><span>🌱</span> Sensors</h2>
+      <div class="sensors">
+        <div class="card sensor"><i class="dot" id="dSoil"></i><div class="ring" id="rSoil"></div><div class="lbl">Soil moisture</div><div class="sub" id="subSoil">threshold —</div></div>
+        <div class="card sensor"><i class="dot" id="dTemp"></i><div class="ring" id="rTemp"></div><div class="lbl">Temperature</div><div class="sub">GPIO 4 · DHT22</div></div>
+        <div class="card sensor"><i class="dot" id="dHum"></i><div class="ring" id="rHum"></div><div class="lbl">Humidity</div><div class="sub">GPIO 4 · DHT22</div></div>
+        <div class="card sensor"><i class="dot" id="dRain"></i><div class="big" id="rainTxt">—</div><div class="lbl">Rain sensor</div><div class="sub" id="subRain">—</div></div>
+        <div class="card sensor"><i class="dot" id="dFlow"></i><div class="big" id="flowTxt">0.0 <small style="font-size:11px;font-weight:500;color:var(--muted)">L/m</small></div><div class="lbl">Water flow</div><div class="sub" id="subFlow">—</div></div>
+      </div>
+
+      <h2><span>▤</span> Tank levels</h2>
+      <div class="tanks">
+        <div class="card tank"><div><small style="color:var(--muted)">💧 Rain tank</small><div class="pct" id="rtPct">—</div><div class="bar"><i id="rtBar" style="background:var(--blue);width:0"></i></div><div class="sub" style="font-size:10px;color:var(--muted);margin-top:6px">HC-SR04 · TRIG 32 / ECHO 33</div></div><div class="jar"><i id="rtJar" style="background:linear-gradient(#60a5fa,#2563eb);height:0"></i></div></div>
+        <div class="card tank"><div><small style="color:var(--muted)">▤ Main tank</small><div class="pct" id="mtPct">—</div><div class="bar"><i id="mtBar" style="background:var(--green);width:0"></i></div><div class="sub" style="font-size:10px;color:var(--muted);margin-top:6px">HC-SR04 · TRIG 18 / ECHO 19</div></div><div class="jar"><i id="mtJar" style="background:linear-gradient(#4ade80,#16a34a);height:0"></i></div></div>
+      </div>
+
+      <h2><span>🌿</span> Crop preset</h2>
+      <div class="card">
+        <small style="font-size:10px;letter-spacing:.07em;color:var(--muted)">PLANT TYPE</small>
+        <div class="row" style="margin-top:6px">
+          <select id="crop"></select>
+          <span class="chip" id="thrChip">Threshold: — %</span>
+          <button class="btn g" id="applyCrop">✔ Apply to ESP32</button>
+        </div>
+        <div class="note" id="cropNote">—</div>
+      </div>
+
+      <h2><span>⏻</span> Pump control</h2>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><b>Rain &amp; main pump</b>
+          <div class="seg"><button id="mAuto">⟳ Auto</button><button id="mMan">⚙ Manual</button></div></div>
+        <div class="note" id="modeNote">Auto mode — pumps controlled by ESP32 logic</div>
+        <div class="pumps">
+          <div class="pump"><div><b>💧 Rain pump</b><small>GPIO 25 · V7 · relay active-low</small><small id="rpTxt">Off</small></div><button class="sw" id="rpSw"></button></div>
+          <div class="pump"><div><b>▤ Main pump</b><small>GPIO 26 · V8 · relay active-low</small><small id="mpTxt">Off</small></div><button class="sw" id="mpSw"></button></div>
+        </div>
+        <div class="note" id="dryNote" style="display:none;border-color:var(--red);color:var(--red)">⚠ Dry-run error — pump is running with no water flow. Check the tank and tubing.</div>
+      </div>
+
+      <h2><span>🗓</span> Watering schedule</h2>
+      <div class="card">
+        <div class="row" style="justify-content:flex-end"><button class="btn g" id="saveSched">💾 Save schedule</button></div>
+        <div class="sessions" style="margin-top:12px">
+          <div class="sess"><div class="t"><span>☀ Morning session</span><em id="mEm">OFF</em></div>
+            <div class="row"><input type="time" id="mTime" value="07:00"><select id="mDur"></select><button class="sw" id="mSw"></button></div></div>
+          <div class="sess"><div class="t"><span>🌙 Evening session</span><em id="eEm">OFF</em></div>
+            <div class="row"><input type="time" id="eTime" value="17:00"><select id="eDur"></select><button class="sw" id="eSw"></button></div></div>
+        </div>
+        <div class="note">Writes <code>controls/schedule</code> — ESP32 runs once, then resumes normal logic.</div>
+      </div>
+
+      <h2><span>💧</span> Water consumption <small style="color:var(--muted);font-weight:400">today</small></h2>
+      <div class="cons">
+        <div class="card"><span style="color:var(--blue)">💧</span><div style="text-align:center"><small style="color:var(--muted)">Total used</small></div><div class="n" id="cTot" style="color:var(--blue)">0.0 <small>L</small></div><p>from flow sensor</p><button class="btn o" style="margin-top:8px;font-size:11px;padding:5px 10px" id="resetDay">↺ Reset today</button></div>
+        <div class="card"><span style="color:var(--green)">♺</span><div style="text-align:center"><small style="color:var(--muted)">Rain pump</small></div><div class="n" id="cRain" style="color:var(--green)">0.0 <small>L</small></div><p id="cRainT">Runtime: 0m 0s</p></div>
+        <div class="card"><span style="color:var(--amber)">▤</span><div style="text-align:center"><small style="color:var(--muted)">Main pump</small></div><div class="n" id="cMain" style="color:var(--amber)">0.0 <small>L</small></div><p id="cMainT">Runtime: 0m 0s</p></div>
+      </div>
+
+      <h2><span>📊</span> Live sensor trend</h2>
+      <div class="card"><div class="chartbox"><canvas id="trend"></canvas></div></div>
+
+      <h2><span>⚡</span> Pump runtime log</h2>
+      <div class="card">
+        <div class="log4">
+          <div><small>Total runtime</small><b id="lRun">0m 0s</b></div>
+          <div><small>Sessions</small><b id="lSes">0</b></div>
+          <div><small>Est. power</small><b id="lPow">0 Wh</b></div>
+          <div style="border:0"><small>Avg session</small><b id="lAvg">--</b></div>
+        </div>
+        <div id="logTable"><div class="empty">No pump sessions recorded yet</div></div>
+      </div>
+    </main>
+
+    <aside class="side">
+      <div class="card"><h3>☁ Weather</h3>
+        <div class="row"><div style="font-size:34px" id="wIcon">☀</div><div><b id="wMain">—</b><div style="font-size:10px;color:var(--muted)" id="wSub">prediction</div></div></div>
+        <div class="note" id="wNote" style="margin-top:10px">Waiting for data…</div>
+        <div class="kv"><span>Humidity</span><b id="wHum">—</b></div>
+        <div class="kv"><span>Irrigation need</span><b id="wNeed">—</b></div>
+      </div>
+      <div class="card"><h3>⚠ System alerts</h3><div id="alerts"></div></div>
+      <div class="card"><h3>💧 Today's water use</h3>
+        <div class="clock" style="color:var(--blue);font-size:22px" id="sideTot">0.0 L</div>
+        <div class="kv"><span>Rain</span><span id="sideRain">0%</span></div>
+        <div class="kv"><span>Main</span><span id="sideMain">0%</span></div>
+        <div class="kv"><span>Active crop</span><b style="color:var(--amber)" id="sideCrop">—</b></div>
+      </div>
+      <div class="card"><div class="clock" id="clock">--:--:--</div><div style="font-size:11px;color:var(--muted)" id="dateTxt"></div>
+        <div class="kv" style="margin-top:10px"><span>Last update</span><b id="lastUp">—</b></div></div>
+    </aside>
+  </div>
+  <footer>ESP32 · DHT22 · Ultrasonic ×2 · Flow sensor · Firebase Realtime Database</footer>
+</div>
+<div class="modal" id="fbModal"><div class="mbox">
+  <h3>🔗 Connect Firebase</h3>
+  <p>Firebase Console → Project settings (⚙) → General → Your apps → Web app → <b>firebaseConfig</b>. Paste it below, or fill the fields. Saved in this browser only.</p>
+  <label>Paste firebaseConfig (optional — fills the fields automatically)</label>
+  <textarea id="fbPaste" placeholder='const firebaseConfig = { apiKey: "AIza...", authDomain: "...", databaseURL: "https://...", projectId: "...", appId: "..." };'></textarea>
+  <label>apiKey</label><input id="fbApiKey" placeholder="AIzaSy...">
+  <label>databaseURL</label><input id="fbDbUrl" placeholder="https://your-project-default-rtdb.region.firebasedatabase.app">
+  <label>projectId</label><input id="fbProj" placeholder="smart-irrigation-b9260">
+  <label>authDomain (optional)</label><input id="fbAuth" placeholder="smart-irrigation-b9260.firebaseapp.com">
+  <label>appId (optional)</label><input id="fbAppId" placeholder="1:1234567890:web:abcdef">
+  <div class="row" style="margin-top:16px;justify-content:flex-end">
+    <button class="btn o" id="fbReset">Reset</button><button class="btn o" id="fbCancel">Cancel</button><button class="btn g" id="fbSave">Save &amp; connect</button>
+  </div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script>
+/* ═══════════════ FIREBASE CONFIG — මෙතන විතරක් වෙනස් කරන්න ═══════════════
+   Firebase Console → Project settings (⚙) → General → "Your apps" → Web app → firebaseConfig
+   databaseURL එක already ඔයාගේ project එකට දාලා තියෙනවා. ඉතුරු ටික copy-paste කරන්න (optional). */
+const firebaseConfig = {
+  apiKey: "",            // optional for open rules — paste from console if you have it
+  authDomain: "smart-irrigation-b9260.firebaseapp.com",
+  databaseURL: "https://smart-irrigation-b9260-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "smart-irrigation-b9260",
+  appId: ""              // optional
+};
+
+/* config saved from the "Connect Firebase" button overrides the values above */
+try{const saved=JSON.parse(localStorage.getItem("fc_cfg")||"null");if(saved)Object.assign(firebaseConfig,saved)}catch{}
+
+/* tiny wrappers so the rest of the code stays the same (works by just double-clicking the file) */
+const ref=(db,p)=>db.ref(p);
+const onValue=(r,cb,eb)=>r.on("value",cb,eb);
+const set=(r,v)=>r.set(v);
+const update=(r,v)=>r.update(v);
+const get=r=>r.once("value");
+
+/* ───────────── CONSTANTS ───────────── */
+const CROPS = {
+  tomato:   {name:"Tomato",   thr:30, note:"Tomato: water when soil < 30% · moderate moisture needed"},
+  chili:    {name:"Chili",    thr:35, note:"Chili: water when soil < 35% · regular watering"},
+  lettuce:  {name:"Lettuce",  thr:50, note:"Lettuce: water when soil < 50% · keep soil moist"},
+  cucumber: {name:"Cucumber", thr:45, note:"Cucumber: water when soil < 45% · high water demand"},
+  carrot:   {name:"Carrot",   thr:40, note:"Carrot: water when soil < 40% · even moisture"},
+  cactus:   {name:"Cactus",   thr:15, note:"Cactus: water when soil < 15% · let soil dry out"},
+};
+const PUMP_WATTS = {rain:25, main:30};   // used only for the estimated-power number
+const STALE_MS = 30000;                  // ESP32 considered offline if no change for 30s
+const $ = id => document.getElementById(id);
+const num = v => (v===undefined||v===null||v===""||isNaN(+v)) ? null : +v;   // keeps 0 as 0
+const bool = v => v===true||v===1||v==="1"||v==="true"||v==="ON"||v==="on";
+const pick = (o,...k)=>{for(const x of k) if(o && o[x]!==undefined && o[x]!==null) return o[x]; return undefined;};
+const toast = m=>{const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),2200)};
+const fmtDur = s=>{s=Math.round(s);return `${Math.floor(s/60)}m ${s%60}s`};
+
+/* ───────────── STATE ───────────── */
+let demo = false, connected = false, lastChange = 0;
+let S = {}, C = {}, P = {}, rawS = {};   // sensorData (normalised), controls, prediction, raw sensorData
+let db = null;
+let cropKey = "tomato";
+const todayKey = ()=>new Date().toISOString().slice(0,10);
+let usage = load("fc_usage", {day:todayKey(), rain:0, main:0, rainT:0, mainT:0, total:null});
+let sessions = load("fc_sessions", []);
+let openSess = {rain:null, main:null};
+function load(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch{return d}}
+function save(){try{localStorage.setItem("fc_usage",JSON.stringify(usage));localStorage.setItem("fc_sessions",JSON.stringify(sessions.slice(-50)))}catch{}}
+if(usage.day!==todayKey()){usage={day:todayKey(),rain:0,main:0,rainT:0,mainT:0,total:null};sessions=[];save()}
+
+/* ───────────── UI BUILD ───────────── */
+$("crop").innerHTML = Object.entries(CROPS).map(([k,c])=>`<option value="${k}">${c.name} — ${c.thr}%</option>`).join("");
+const durs=[1,2,5,10,15,20,30].map(m=>`<option value="${m}" ${m===5?"selected":""}>${m} min</option>`).join("");
+$("mDur").innerHTML=durs;$("eDur").innerHTML=durs;
+
+function ring(el,val,max,color,unit,fmt){
+  const r=34,c=2*Math.PI*r,p=val==null?0:Math.max(0,Math.min(1,val/max));
+  el.innerHTML=`<svg width="78" height="78" viewBox="0 0 78 78"><circle cx="39" cy="39" r="${r}" fill="none" stroke="var(--line)" stroke-width="6"/>
+  <circle cx="39" cy="39" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-p)}" style="transition:stroke-dashoffset .6s"/></svg>
+  <div class="v"><div>${val==null?"—":(fmt?val.toFixed(1):Math.round(val))}<small>${unit}</small></div></div>`;
+}
+
+/* ───────────── THEME ───────────── */
+function setTheme(t){document.documentElement.dataset.theme=t;$("themeBtn").textContent=t==="dark"?"☀ Light":"🌙 Dark";try{localStorage.setItem("fc_theme",t)}catch{}; if(chart)updateChartColors()}
+$("themeBtn").onclick=()=>setTheme(document.documentElement.dataset.theme==="dark"?"light":"dark");
+
+/* ───────────── CHART ───────────── */
+const hist = {t:[],temp:[],hum:[],soil:[]};
+let chart;
+function initChart(){
+  chart=new Chart($("trend"),{type:"line",data:{labels:hist.t,datasets:[
+    {label:"Temp °C",data:hist.temp,borderColor:"#f59e0b",backgroundColor:"#f59e0b22",tension:.35,pointRadius:0,borderWidth:2,yAxisID:"y"},
+    {label:"Humidity %",data:hist.hum,borderColor:"#2563eb",backgroundColor:"#2563eb18",fill:true,tension:.35,pointRadius:0,borderWidth:2,yAxisID:"y1"},
+    {label:"Soil %",data:hist.soil,borderColor:"#16a34a",backgroundColor:"#16a34a18",fill:true,tension:.35,pointRadius:0,borderWidth:2,yAxisID:"y1"},
+  ]},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:"index",intersect:false},
+    plugins:{legend:{position:"top",align:"start",labels:{boxWidth:8,boxHeight:8,usePointStyle:true,font:{size:11}}}},
+    scales:{x:{ticks:{maxTicksLimit:6,font:{size:10}},grid:{display:false}},
+      y:{position:"left",suggestedMin:15,suggestedMax:45,ticks:{font:{size:10}},grid:{color:"#8883"}},
+      y1:{position:"right",min:0,max:100,ticks:{font:{size:10}},grid:{display:false}}}}});
+  updateChartColors();
+}
+function updateChartColors(){const c=getComputedStyle(document.documentElement).getPropertyValue("--muted");Chart.defaults.color=c.trim();chart.update()}
+function pushHist(){
+  const t=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  hist.t.push(t);hist.temp.push(num(S.temperature));hist.hum.push(num(S.humidity));hist.soil.push(num(S.soilMoisture));
+  if(hist.t.length>90)for(const k in hist)hist[k].shift();
+  chart.update();
+}
+
+/* ───────────── NORMALISE sensorData ─────────────
+   Accepts several key spellings so it works with whatever your firmware writes. */
+/* Finds a value by key name ignoring case, underscores and spaces, so
+   "Soil_Moisture", "soilMoisture" and "soilmoisture" all match. */
+function find(raw,...patterns){
+  for(const re of patterns){
+    for(const k of Object.keys(raw)){
+      if(re.test(k.toLowerCase().replace(/[^a-z0-9]/g,"")) && raw[k]!==null && typeof raw[k]!=="object") return raw[k];
+    }
+  }
+  return undefined;
+}
+function norm(raw){
+  raw=raw||{};
+  if(typeof raw!=="object")raw={};
+  return {
+    soilMoisture:num(find(raw,/^soilmoisture(percent|pct)?$/,/^soil/,/moisture/)),
+    temperature:num(find(raw,/^temperature/,/^temp/)),
+    humidity:num(find(raw,/^humidity/,/^hum/)),
+    isRaining:bool(find(raw,/^(israining|raining|rain|rainsensor|rainstatus|raindetected|rainfall)$/)),
+    flowRate:num(find(raw,/^flowrate/,/^flow(?!.*total)/)) ?? 0,
+    totalLiters:num(find(raw,/^total(water)?(liters|litres|used)?$/,/totalwaterliters|totalliters|totallitres/)),
+    mainTankLevel:num(find(raw,/^maintank(level|percent|pct)?$/,/main.*(tank|level)/)),
+    rainTankLevel:num(find(raw,/^raintank(level|percent|pct)?$/,/rain.*(tank|level)/)),
+    mainPumpStatus:bool(find(raw,/^mainpump(status|state|on)?$/,/main.*pump/)),
+    rainPumpStatus:bool(find(raw,/^rainpump(status|state|on)?$/,/rain.*pump/)),
+    dryRunError:bool(find(raw,/dryrun/,/dry/)),
+    lastSeen:num(find(raw,/^(lastseen|timestamp|updatedat|lastupdate)$/)),
+    _has:Object.keys(raw).length>0
+  };
+}
+
+/* ───────────── RENDER ───────────── */
+function render(){
+  const thr = num(C.threshold) ?? CROPS[cropKey].thr;
+  const online = demo || (connected && S._has && (Date.now()-lastChange<STALE_MS || S.lastSeen==null));
+  $("fbDot").className="dotc"+(connected?" ok":"");
+  $("stEsp").textContent = demo?"Simulated": !connected?"No database": !S._has?"No data": online?"Online":"Offline";
+  $("stEsp").style.color = online||demo?"var(--green)":"var(--red)";
+
+  const mode = (String(pick(C,"mode")||"auto").toLowerCase()==="manual")?"manual":"auto";
+  $("stMode").textContent = mode==="auto"?"Auto":"Manual";
+  $("modePill").textContent = "⏻ "+(mode==="auto"?"Auto":"Manual")+" mode";
+  $("mAuto").classList.toggle("act",mode==="auto");$("mMan").classList.toggle("act",mode==="manual");
+  $("modeNote").textContent = mode==="auto"?"Auto mode — pumps controlled by ESP32 logic":"Manual mode — you control the pumps with the switches below";
+  const active = S.rainPumpStatus&&S.mainPumpStatus?"Rain + Main":S.rainPumpStatus?"Rain pump":S.mainPumpStatus?"Main pump":"None";
+  $("stPump").textContent=active;
+
+  ring($("rSoil"),S.soilMoisture,100,"#16a34a","% MOIST");
+  ring($("rTemp"),S.temperature,50,"#f59e0b","°C",true);
+  ring($("rHum"),S.humidity,100,"#2563eb","% RH");
+  $("subSoil").textContent="threshold "+thr+"%";
+  $("dSoil").className="dot"+(S.soilMoisture!=null?" on":"");$("dTemp").className="dot"+(S.temperature!=null?" on":"");
+  $("dHum").className="dot"+(S.humidity!=null?" on":"");$("dRain").className="dot on";$("dFlow").className="dot"+(S.flowRate>0?" on":"");
+  $("rainTxt").textContent=S.isRaining?"Rain":"Dry";$("rainTxt").style.color=S.isRaining?"var(--blue)":"var(--text)";
+  $("subRain").textContent=S.isRaining?"● raining":"● idle";
+  $("flowTxt").firstChild.textContent=S.flowRate.toFixed(1)+" ";
+  $("subFlow").textContent=S.flowRate>0?"flowing":"- - - - - -";
+
+  for(const [k,pre] of [["rainTankLevel","rt"],["mainTankLevel","mt"]]){
+    const v=S[k];$(pre+"Pct").textContent=v==null?"—":Math.round(v)+"%";
+    const w=v==null?0:Math.max(0,Math.min(100,v));$(pre+"Bar").style.width=w+"%";$(pre+"Jar").style.height=w+"%";
+  }
+
+  const cr=CROPS[cropKey];
+  $("thrChip").textContent="Threshold: "+thr+" %";$("cropNote").textContent=cr.note;$("sideCrop").textContent=cr.name+" · "+thr+"%";
+
+  const manual=mode==="manual";
+  setSw("rpSw",S.rainPumpStatus,!manual);setSw("mpSw",S.mainPumpStatus,!manual);
+  $("rpTxt").textContent=S.rainPumpStatus?"Running":"Off";$("mpTxt").textContent=S.mainPumpStatus?"Running":"Off";
+  $("dryNote").style.display=S.dryRunError?"block":"none";
+
+  // weather / prediction card
+  const need=find(P,/need|irrigation|level|prediction|result|class|label/) ?? Object.values(P).find(v=>typeof v==="string"||typeof v==="number");
+  const conf=num(find(P,/confidence|probability|score/));
+  $("wNeed").textContent=need!=null?String(need)+(conf!=null?` (${Math.round(conf<=1?conf*100:conf)}%)`:""):"—";
+  $("wHum").textContent=S.humidity!=null?Math.round(S.humidity)+"%":"—";
+  const t=S.temperature;
+  $("wIcon").textContent=S.isRaining?"🌧":(S.humidity>85?"☁":"☀");
+  $("wMain").textContent=S.isRaining?"Raining":(S.humidity>85?"Cloudy":"Clear");
+  $("wSub").textContent=t!=null?t.toFixed(1)+"°C · heuristic prediction":"heuristic prediction";
+  $("stWeather").textContent=t!=null?Math.round(t)+"°C":"—";
+  $("wNote").textContent=S.isRaining?"Rain detected — irrigation paused":(S.humidity>80?"High humidity — low need for irrigation":"Low rain likelihood — auto irrigation active");
+
+  // alerts
+  const al=[];
+  al.push(online?["ok","ESP32 connected"]:["bad","ESP32 not connected"]);
+  if(S.soilMoisture!=null)al.push([S.soilMoisture<thr?"warn":"ok",`Soil: ${Math.round(S.soilMoisture)}%${S.soilMoisture<thr?" — below threshold":""}`]);
+  const lowTank=[S.rainTankLevel,S.mainTankLevel].some(v=>v!=null&&v<15);
+  al.push(lowTank?["warn","Tanks: low level"]:["ok","Tanks: OK"]);
+  al.push(S.isRaining?["warn","Rain: detected"]:["ok","Rain: clear"]);
+  if(S.dryRunError)al.push(["bad","Dry-run error!"]);
+  const sc=C.schedule||{};al.push(bool(sc.morningEnabled)||bool(sc.eveningEnabled)?["ok","Schedule: enabled"]:["","Schedule: disabled"]);
+  $("alerts").innerHTML=al.map(([c,t])=>`<div class="al ${c}"><i></i>${t}</div>`).join("");
+
+  renderUsage();
+}
+function setSw(id,on,disabled){const e=$(id);e.classList.toggle("on",!!on);e.disabled=disabled}
+
+function renderUsage(){
+  const total = S.totalLiters!=null ? S.totalLiters - (usage.total??S.totalLiters) + 0 : usage.rain+usage.main;
+  const t=Math.max(total,usage.rain+usage.main);
+  $("cTot").firstChild.textContent=t.toFixed(1)+" ";$("cRain").firstChild.textContent=usage.rain.toFixed(1)+" ";$("cMain").firstChild.textContent=usage.main.toFixed(1)+" ";
+  $("cRainT").textContent="Runtime: "+fmtDur(usage.rainT);$("cMainT").textContent="Runtime: "+fmtDur(usage.mainT);
+  const pct=x=>t>0?Math.round(x/t*100):0;
+  $("sideTot").textContent=t.toFixed(1)+" L";$("sideRain").textContent=pct(usage.rain)+"%";$("sideMain").textContent=pct(usage.main)+"%";
+  const run=usage.rainT+usage.mainT;$("lRun").textContent=fmtDur(run);$("lSes").textContent=sessions.length;
+  $("lPow").textContent=((usage.rainT*PUMP_WATTS.rain+usage.mainT*PUMP_WATTS.main)/3600).toFixed(1)+" Wh";
+  $("lAvg").textContent=sessions.length?fmtDur(sessions.reduce((a,s)=>a+s.dur,0)/sessions.length):"--";
+  $("logTable").innerHTML=sessions.length?`<table><tr><th>Pump</th><th>Start</th><th>Duration</th><th>Water</th></tr>${sessions.slice(-8).reverse().map(s=>`<tr><td>${s.pump}</td><td>${new Date(s.start).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</td><td>${fmtDur(s.dur)}</td><td>${s.liters.toFixed(1)} L</td></tr>`).join("")}</table>`:`<div class="empty">No pump sessions recorded yet</div>`;
+}
+
+/* ───────────── 1-second tick: runtime + flow integration + sessions ───────────── */
+let lastTick=Date.now();
+setInterval(()=>{
+  const now=Date.now(),dt=(now-lastTick)/1000;lastTick=now;
+  $("clock").textContent=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  $("dateTxt").textContent=new Date().toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"});
+  if(usage.day!==todayKey()){usage={day:todayKey(),rain:0,main:0,rainT:0,mainT:0,total:S.totalLiters};sessions=[];}
+  const liters=(S.flowRate||0)/60*dt;
+  for(const [k,on] of [["rain",S.rainPumpStatus],["main",S.mainPumpStatus]]){
+    if(on){
+      usage[k+"T"]+=dt;
+      // if both run, split flow equally
+      usage[k]+=S.rainPumpStatus&&S.mainPumpStatus?liters/2:liters;
+      if(!openSess[k])openSess[k]={pump:k==="rain"?"Rain":"Main",start:now,dur:0,liters:0};
+      openSess[k].dur+=dt;openSess[k].liters+=S.rainPumpStatus&&S.mainPumpStatus?liters/2:liters;
+    }else if(openSess[k]){ if(openSess[k].dur>=2)sessions.push(openSess[k]);openSess[k]=null; }
+  }
+  save();renderUsage();
+},1000);
+setInterval(()=>{ if(S._has||demo){pushHist()} },5000);
+
+/* ───────────── FIREBASE ───────────── */
+function showErr(m){const b=$("errBox");b.textContent=m;b.style.display=m?"block":"none"}
+function startFirebase(){
+  try{
+    if(!firebaseConfig.apiKey)delete firebaseConfig.apiKey;if(!firebaseConfig.appId)delete firebaseConfig.appId;
+    firebase.initializeApp(firebaseConfig);db=firebase.database();
+    onValue(ref(db,".info/connected"),s=>{connected=!!s.val();if(!connected&&!demo)showErr("Waiting for connection to Firebase…");else showErr("");render()});
+    const errH=e=>{showErr("Firebase error: "+e.message+" — check your Realtime Database rules.")};
+    onValue(ref(db,"sensorData"),s=>{if(demo)return;rawS=s.val()||{};S=norm(rawS);lastChange=Date.now();$("lastUp").textContent=new Date().toLocaleTimeString();render()},errH);
+    onValue(ref(db,"controls"),s=>{if(demo)return;C=s.val()||{};syncControlsUI();render()},errH);
+    onValue(ref(db,"prediction"),s=>{if(demo)return;P=s.val()||{};render()},errH);
+  }catch(e){showErr("Could not start Firebase: "+e.message)}
+}
+
+/* write helper — in demo mode just updates local state */
+async function writeControl(path,val){
+  if(demo){const parts=path.split("/");let o=C;for(let i=0;i<parts.length-1;i++)o=o[parts[i]]=o[parts[i]]||{};o[parts.at(-1)]=val;
+    if(path==="rainPump")S.rainPumpStatus=!!val;if(path==="mainPump")S.mainPumpStatus=!!val;render();return}
+  if(!db){toast("Not connected");return}
+  try{await set(ref(db,"controls/"+path),val)}catch(e){showErr("Write failed: "+e.message+" — update your database rules to allow writes to /controls.")}
+}
+
+/* ───────────── CONTROLS ───────────── */
+$("mAuto").onclick=()=>{writeControl("mode","auto");toast("Auto mode")};
+$("mMan").onclick=()=>{writeControl("mode","manual");toast("Manual mode")};
+$("rpSw").onclick=()=>{const v=!S.rainPumpStatus;writeControl("rainPump",v);toast("Rain pump "+(v?"ON":"OFF"))};
+$("mpSw").onclick=()=>{const v=!S.mainPumpStatus;writeControl("mainPump",v);toast("Main pump "+(v?"ON":"OFF"))};
+$("crop").onchange=()=>{cropKey=$("crop").value;render()};
+$("applyCrop").onclick=async()=>{const c=CROPS[cropKey];
+  if(demo){C.threshold=c.thr;C.crop=cropKey;render();toast("Applied (demo)");return}
+  try{await update(ref(db,"controls"),{threshold:c.thr,crop:cropKey});toast(c.name+" — threshold "+c.thr+"% applied")}catch(e){showErr("Write failed: "+e.message)}};
+for(const [sw,em] of [["mSw","mEm"],["eSw","eEm"]]){$(sw).onclick=()=>{$(sw).classList.toggle("on");$(em).textContent=$(sw).classList.contains("on")?"ON":"OFF"}}
+$("saveSched").onclick=async()=>{
+  const sc={morningEnabled:$("mSw").classList.contains("on"),morningTime:$("mTime").value,morningDuration:+$("mDur").value,
+            eveningEnabled:$("eSw").classList.contains("on"),eveningTime:$("eTime").value,eveningDuration:+$("eDur").value,scheduleRun:false};
+  if(demo){C.schedule=sc;render();toast("Schedule saved (demo)");return}
+  try{await update(ref(db,"controls/schedule"),sc);toast("Schedule saved")}catch(e){showErr("Write failed: "+e.message)}};
+$("resetDay").onclick=()=>{usage={day:todayKey(),rain:0,main:0,rainT:0,mainT:0,total:S.totalLiters};sessions=[];save();renderUsage();toast("Today reset")};
+
+function syncControlsUI(){
+  if(C.crop&&CROPS[C.crop]){cropKey=C.crop;$("crop").value=cropKey}
+  else if(num(C.threshold)!=null){const k=Object.keys(CROPS).find(k=>CROPS[k].thr===+C.threshold);if(k){cropKey=k;$("crop").value=k}}
+  const sc=C.schedule;if(sc&&document.activeElement.id!=="mTime"&&document.activeElement.id!=="eTime"){
+    $("mSw").classList.toggle("on",bool(sc.morningEnabled));$("mEm").textContent=bool(sc.morningEnabled)?"ON":"OFF";
+    $("eSw").classList.toggle("on",bool(sc.eveningEnabled));$("eEm").textContent=bool(sc.eveningEnabled)?"ON":"OFF";
+    if(sc.morningTime)$("mTime").value=sc.morningTime;if(sc.eveningTime)$("eTime").value=sc.eveningTime;
+    if(sc.morningDuration)$("mDur").value=sc.morningDuration;if(sc.eveningDuration)$("eDur").value=sc.eveningDuration;}
+}
+
+/* ───────────── DEMO MODE ───────────── */
+let demoTimer;
+function demoStep(){
+  const j=(v,a,lo,hi)=>Math.max(lo,Math.min(hi,v+(Math.random()-.5)*a));
+  const pumpOn=S.rainPumpStatus||S.mainPumpStatus;
+  S={_has:true,soilMoisture:j(S.soilMoisture??41,2+(pumpOn?4:0),5,95)+(pumpOn?1.5:-.2),temperature:j(S.temperature??26.5,.6,18,40),humidity:j(S.humidity??61,1.5,30,95),
+     isRaining:S.isRaining||false,flowRate:pumpOn?j(2.4,.5,1,4):0,rainTankLevel:j(S.rainTankLevel??68,.3,0,100)-(S.rainPumpStatus?.4:0),
+     mainTankLevel:j(S.mainTankLevel??74,.3,0,100)-(S.mainPumpStatus?.4:0),rainPumpStatus:S.rainPumpStatus||false,mainPumpStatus:S.mainPumpStatus||false,dryRunError:false,totalLiters:null};
+  const thr=num(C.threshold)??30;
+  if(String(C.mode||"auto")==="auto"){S.mainPumpStatus=S.soilMoisture<thr&&!S.isRaining;S.rainPumpStatus=false}
+  P={irrigationNeed:S.soilMoisture<thr?"High":S.soilMoisture<thr+15?"Medium":"Low",confidence:.82};
+  lastChange=Date.now();$("lastUp").textContent=new Date().toLocaleTimeString();render();
+}
+$("demoBtn").onclick=()=>{
+  demo=!demo;$("demoBtn").style.borderColor=demo?"var(--green)":"";$("demoBtn").textContent=demo?"● Demo ON":"● Demo data";
+  clearInterval(demoTimer);
+  if(demo){showErr("");C={mode:"auto",threshold:CROPS[cropKey].thr};S={};demoStep();demoTimer=setInterval(demoStep,2000)}
+  else{S={};C={};P={};render();toast("Live data — reconnecting…");if(db){get(ref(db,"/")).then(s=>{const v=s.val()||{};S=norm(v.sensorData);C=v.controls||{};P=v.prediction||{};syncControlsUI();render()}).catch(()=>{})}}
+};
+
+/* ───────────── CONNECT FIREBASE MODAL ───────────── */
+const fbFields={apiKey:"fbApiKey",databaseURL:"fbDbUrl",projectId:"fbProj",authDomain:"fbAuth",appId:"fbAppId"};
+function openFb(){for(const [k,id] of Object.entries(fbFields))$(id).value=firebaseConfig[k]||"";$("fbPaste").value="";$("fbModal").classList.add("show")}
+$("fbBtn").onclick=openFb;
+$("fbCancel").onclick=()=>$("fbModal").classList.remove("show");
+$("fbModal").onclick=e=>{if(e.target.id==="fbModal")$("fbModal").classList.remove("show")};
+$("fbPaste").oninput=()=>{const t=$("fbPaste").value;
+  for(const [k,id] of Object.entries(fbFields)){const m=t.match(new RegExp("[\"']?"+k+"[\"']?\\s*:\\s*[\"']([^\"']+)[\"']"));if(m)$(id).value=m[1]}};
+$("fbSave").onclick=()=>{
+  const cfg={};for(const [k,id] of Object.entries(fbFields)){const v=$(id).value.trim();if(v)cfg[k]=v}
+  if(!cfg.databaseURL||!/^https:\/\/.+firebase(io\.com|database\.app)/.test(cfg.databaseURL)){toast("Enter a valid databaseURL");return}
+  if(!cfg.projectId){try{cfg.projectId=cfg.databaseURL.split("//")[1].split("-default-rtdb")[0]}catch{}}
+  try{localStorage.setItem("fc_cfg",JSON.stringify(cfg))}catch{}
+  location.reload();
+};
+$("fbReset").onclick=()=>{try{localStorage.removeItem("fc_cfg")}catch{}location.reload()};
+
+/* ───────────── INIT ───────────── */
+try{setTheme(localStorage.getItem("fc_theme")||"light")}catch{setTheme("light")}
+initChart();S=norm({});render();startFirebase();
+</script>
+</body>
+</html>
